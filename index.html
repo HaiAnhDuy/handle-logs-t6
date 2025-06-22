@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Báo cáo sự cố</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h2>Báo cáo sự cố kho</h2>
+      </div>
+      <!-- Tab Navigation -->
+      <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active"
+            id="create-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#create"
+            type="button"
+            role="tab"
+            aria-controls="create"
+            aria-selected="true"
+          >
+            <i class="fas fa-plus-circle me-2"></i>Tạo mới
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="history-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#history"
+            type="button"
+            role="tab"
+            aria-controls="history"
+            aria-selected="false"
+          >
+            <i class="fas fa-history me-2"></i>Lịch sử
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link"
+            id="analytics-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#analytics"
+            type="button"
+            role="tab"
+            aria-controls="analytics"
+            aria-selected="false"
+          >
+            <i class="fas fa-chart-bar me-2"></i>Phân tích
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content" id="myTabContent">
+        <!-- Tạo mới Tab -->
+        <div
+          class="tab-pane fade show active"
+          id="create"
+          role="tabpanel"
+          aria-labelledby="create-tab"
+        >
+          <div class="form-group">
+            <label for="issueSelect" class="form-label fw-bold"
+              >Chọn loại sự cố :</label
+            >
+            <div class="select-wrapper">
+              <select id="issueSelect" class="form-select form-select-lg">
+                <option value="Bị chậm">Bị chậm</option>
+                <option value="Dừng hẳn">Dừng hẳn</option>
+              </select>
+              <div class="select-arrow">
+                <i class="fas fa-chevron-down"></i>
+              </div>
+            </div>
+          </div>
+
+          <button
+            class="btn-submit"
+            style="margin-bottom: 10px"
+            onclick="reportIssue()"
+          >
+            <i class="fas fa-paper-plane me-2"></i>Gửi báo cáo
+          </button>
+
+          <div id="successMessage" class="success-message">
+            <i class="fas fa-check-circle me-2"></i>
+            <span id="successText"></span>
+          </div>
+
+          <div id="errorMessage" class="error-message">
+            <i class="fas fa-times-circle me-2"></i>
+            <span id="errorText"></span>
+          </div>
+        </div>
+
+        <!-- Lịch sử Tab -->
+        <div
+          class="tab-pane fade"
+          id="history"
+          role="tabpanel"
+          aria-labelledby="history-tab"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Nhật ký hôm nay</h4>
+            <button
+              class="btn btn-outline-primary btn-sm"
+              onclick="loadHistory()"
+            >
+              <i class="fas fa-sync-alt me-2"></i> Làm mới
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Thời gian</th>
+                  <th>Loại sự cố</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr class="placeholder-row">
+                  <td colspan="3" class="text-center">Đang tải dữ liệu...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            id="historyError"
+            class="error-message mt-3"
+            style="display: none"
+          >
+            <i class="fas fa-times-circle me-2"></i>
+            <span id="historyErrorText"></span>
+          </div>
+        </div>
+
+        <!-- Phân tích Tab -->
+        <div
+          class="tab-pane fade"
+          id="analytics"
+          role="tabpanel"
+          aria-labelledby="analytics-tab"
+        >
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Thống kê sự cố</h4>
+          </div>
+
+          <div class="chart-container">
+            <canvas id="issueChart"></canvas>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-md-6 mb-3">
+              <div class="stats-card">
+                <div class="stats-card-header">
+                  <h5>
+                    <i class="fas fa-exclamation-circle me-2"></i> Tổng số sự cố
+                  </h5>
+                </div>
+                <div class="stats-card-body">
+                  <div class="stats-number" id="totalIssues">--</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <div class="stats-card">
+                <div class="stats-card-header">
+                  <h5>
+                    <i class="fas fa-chart-pie me-2"></i> Loại sự cố phổ biến
+                  </h5>
+                </div>
+                <div class="stats-card-body">
+                  <div class="stats-text" id="commonIssue">--</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Sửa/Xóa -->
+    <div
+      class="modal fade"
+      id="issueModal"
+      tabindex="-1"
+      aria-labelledby="issueModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="issueModalLabel">Chi tiết sự cố</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editIssueForm">
+              <input type="hidden" id="issueId" value="" />
+
+              <div class="mb-3">
+                <label for="issueIdDisplay" class="form-label">ID</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="issueIdDisplay"
+                  readonly
+                />
+              </div>
+
+              <div class="mb-3">
+                <label for="issueType" class="form-label">Loại sự cố</label>
+                <select id="issueType" class="form-select">
+                  <option value="Bị chậm">Bị chậm</option>
+                  <option value="Dừng hẳn">Dừng hẳn</option>
+                </select>
+              </div>
+
+              <!-- <div class="mb-3">
+                <label for="issueStatus" class="form-label">Trạng thái</label>
+                <select id="issueStatus" class="form-select">
+                  <option value="pending">Đang xử lý</option>
+                  <option value="resolved">Đã xử lý</option>
+                </select>
+              </div> -->
+
+              <div class="mb-3">
+                <label for="issueTime" class="form-label">Thời gian</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="issueTime"
+                  readonly
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-danger"
+              id="deleteIssueBtn"
+            >
+              Xóa
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Đóng
+            </button>
+            <button type="button" class="btn btn-primary" id="saveIssueBtn">
+              Lưu thay đổi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function reportIssue() {
+        const select = document.getElementById("issueSelect");
+        const selectedIssue = select.value;
+        const successMessage = document.getElementById("successMessage");
+        const errorMessage = document.getElementById("errorMessage");
+        const successText = document.getElementById("successText");
+        const errorText = document.getElementById("errorText");
+
+        // Hiển thị hiệu ứng loading
+        const submitBtn = document.querySelector(".btn-submit");
+        const originalContent = submitBtn.innerHTML;
+        submitBtn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang gửi...';
+        submitBtn.disabled = true;
+
+        // Ẩn thông báo trước khi gửi
+        successMessage.style.display = "none";
+        errorMessage.style.display = "none";
+
+        const formData = new FormData();
+        formData.append("issue", selectedIssue);
+
+        fetch(
+          "https://script.google.com/macros/s/AKfycbx3gz9cwbyZTJzvHRmlpSd9EY9MiTGZXsejWplt8cUUqC3lc_3-22lT_4sgGvE3HsIs-w/exec",
+          {
+            method: "POST",
+            body: formData,
+          }
+        )
+          .then((res) => res.text())
+          .then((msg) => {
+            // Hiển thị thông báo thành công
+            successText.textContent = "Đã gửi thành công: " + msg;
+            successMessage.style.display = "block";
+
+            // Khôi phục nút gửi
+            submitBtn.innerHTML = originalContent;
+            submitBtn.disabled = false;
+          })
+          .catch((err) => {
+            // Hiển thị thông báo lỗi
+            errorText.textContent = "Gửi lỗi: " + err;
+            errorMessage.style.display = "block";
+            console.error("Error:", err);
+
+            // Khôi phục nút gửi
+            submitBtn.innerHTML = originalContent;
+            submitBtn.disabled = false;
+          });
+      }
+
+      function loadHistory() {
+        const tableBody = document.getElementById("historyTableBody");
+        const historyError = document.getElementById("historyError");
+        const historyErrorText = document.getElementById("historyErrorText");
+
+        // Hiển thị loading
+        tableBody.innerHTML =
+          '<tr><td colspan="4" class="text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Đang tải dữ liệu...</td></tr>';
+        historyError.style.display = "none"; // Gọi API lấy dữ liệu
+        fetch(
+          "https://script.google.com/macros/s/AKfycbw_4UIZ9AwVZ82dwVfO47P9ShmJdUEaq0bv3RIL_8Rg7LfJUwVhTo4SkFWAOMaDJe8L9w/exec?all=true",
+          {
+            method: "GET",
+          }
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            // Hiển thị dữ liệu vào bảng
+            if (data && data.length > 0) {
+              tableBody.innerHTML = "";
+              data.forEach((entry) => {
+                const row = document.createElement("tr");
+
+                // Format thời gian
+                const listDate = entry?.time.split(" ");
+                const timeStr = listDate[1] + " " + listDate[2];
+
+                // Tạo trạng thái
+                let statusBadge = "";
+                if (entry.status === "resolved") {
+                  statusBadge =
+                    '<span class="badge bg-success">Đã xử lý</span>';
+                } else {
+                  statusBadge =
+                    '<span class="badge bg-warning text-dark">Đang xử lý</span>';
+                } // Thêm class và ID cho row để nhận biết có thể click
+                row.classList.add("issue-row");
+                row.style.cursor = "pointer";
+
+                // Thêm ID riêng cho từng hàng dựa trên ID của entry hoặc index
+                const rowId = entry.row;
+                row.id = rowId;
+                row.setAttribute("data-issue-id", rowId);
+                row.innerHTML = `
+                  <td>${rowId}</td>
+                  <td>${timeStr}</td>
+                  <td>${entry.issue || "Không xác định"}</td>
+                  <td>${statusBadge}</td>
+                `;
+
+                // Thêm sự kiện click để mở modal sửa/xóa
+                row.addEventListener("click", function () {
+                  console.log("Row clicked:", entry);
+                  openEditModal(entry);
+                });
+
+                tableBody.appendChild(row);
+              });
+            } else {
+              tableBody.innerHTML =
+                '<tr><td colspan="4" class="text-center">Không có dữ liệu nào được ghi nhận hôm nay</td></tr>';
+            }
+          })
+          .catch((err) => {
+            console.error("Error fetching log:", err);
+            tableBody.innerHTML = "";
+            historyErrorText.textContent = "Không thể tải dữ liệu: " + err;
+            historyError.style.display = "block";
+          });
+      }
+      let issueModal;
+
+      function openEditModal(entry) {
+        console.log("Opening modal for entry:", entry);
+
+        const issueId = entry.row || "";
+        document.getElementById("issueId").value = issueId;
+        document.getElementById("issueIdDisplay").value = issueId;
+        document.getElementById("issueType").value = entry.issue || "Bị chậm";
+
+        document.getElementById("issueTime").value = entry.time || "";
+
+        if (!issueModal) {
+          issueModal = new bootstrap.Modal(
+            document.getElementById("issueModal")
+          );
+        }
+        issueModal.show();
+      }
+
+      // Biểu đồ thống kê
+      let issueChart;
+      function initializeChart() {
+        const ctx = document.getElementById("issueChart").getContext("2d");
+
+        const initialData = {
+          labels: [],
+          datasets: [
+            {
+              label: "Bị chậm",
+              data: [],
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 2,
+            },
+            {
+              label: "Dừng hẳn",
+              data: [],
+              backgroundColor: "rgba(255, 99, 132, 0.2)",
+              borderColor: "rgba(255, 99, 132, 1)",
+              borderWidth: 2,
+            },
+          ],
+        };
+
+        issueChart = new Chart(ctx, {
+          type: "bar",
+          data: initialData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "top",
+              },
+              title: {
+                display: true,
+                text: "Thống kê sự cố theo tuần",
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                },
+              },
+            },
+          },
+        });
+        fetch(
+          "https://script.google.com/macros/s/AKfycbxpnvjOYXeYX27MsTxxSB_RrmbplgmoamTgcd_rjTj1Zqoo9Ah1cecUmhkd9TaeKM34ZA/exec",
+          {
+            method: "GET",
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(">>> :V Chart data fetched:", data);
+
+            if (data && data.length > 0) {
+              // Xử lý dữ liệu cho biểu đồ
+              // Nhóm dữ liệu theo ngày
+              const groupedByDate = {};
+
+              data.forEach((entry) => {
+                if (!entry.time) return;
+
+                // Lấy ngày từ chuỗi thời gian (ví dụ: 22/06/2025 từ 22/06/2025 03:24 PM)
+                const dateStr = entry.time.split(" ")[0];
+
+                if (!groupedByDate[dateStr]) {
+                  groupedByDate[dateStr] = {
+                    "Bị chậm": 0,
+                    "Dừng hẳn": 0,
+                  };
+                }
+
+                // Tăng số lượng theo loại sự cố
+                if (entry.issue === "Bị chậm") {
+                  groupedByDate[dateStr]["Bị chậm"]++;
+                } else if (entry.issue === "Dừng hẳn") {
+                  groupedByDate[dateStr]["Dừng hẳn"]++;
+                }
+              });
+
+              // Chuyển đổi dữ liệu đã nhóm thành định dạng cho biểu đồ
+              const labels = Object.keys(groupedByDate).sort();
+              const delayedData = labels.map(
+                (date) => groupedByDate[date]["Bị chậm"]
+              );
+              const stoppedData = labels.map(
+                (date) => groupedByDate[date]["Dừng hẳn"]
+              );
+
+              // Cập nhật biểu đồ với dữ liệu thực tế
+              issueChart.data.labels = labels;
+              issueChart.data.datasets[0].data = delayedData;
+              issueChart.data.datasets[1].data = stoppedData;
+              issueChart.update();
+
+              // Tính tổng số sự cố và loại phổ biến nhất
+              const totalIssues = data.length;
+              let delayedCount = 0;
+              let stoppedCount = 0;
+
+              data.forEach((entry) => {
+                if (entry.issue === "Bị chậm") delayedCount++;
+                else if (entry.issue === "Dừng hẳn") stoppedCount++;
+              });
+
+              const commonIssue =
+                delayedCount >= stoppedCount
+                  ? `Bị chậm (${delayedCount} lần)`
+                  : `Dừng hẳn (${stoppedCount} lần)`;
+
+              // Cập nhật thông số thống kê
+              document.getElementById("totalIssues").textContent = totalIssues;
+              document.getElementById("commonIssue").textContent = commonIssue;
+            } else {
+              // Nếu không có dữ liệu
+              document.getElementById("totalIssues").textContent = "0";
+              document.getElementById("commonIssue").textContent =
+                "Không có dữ liệu";
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching chart data:", error);
+            document.getElementById("totalIssues").textContent = "--";
+            document.getElementById("commonIssue").textContent =
+              "Lỗi tải dữ liệu";
+          });
+      }
+      function switchChart() {
+        // Không làm gì cả - chỉ giữ lại hàm để tránh lỗi nếu có code gọi đến
+      }
+      document.addEventListener("DOMContentLoaded", function () {
+        issueModal = new bootstrap.Modal(
+          document.getElementById("issueModal"),
+          {
+            keyboard: false,
+            backdrop: "static",
+          }
+        );
+
+        document
+          .getElementById("history-tab")
+          .addEventListener("shown.bs.tab", function () {
+            loadHistory();
+          });
+
+        // Khởi tạo biểu đồ khi chuyển sang tab phân tích
+        document
+          .getElementById("analytics-tab")
+          .addEventListener("shown.bs.tab", function () {
+            if (!issueChart) {
+              initializeChart();
+            }
+          });
+
+        // Xử lý sự kiện nút Lưu thay đổi trong modal
+        document
+          .getElementById("saveIssueBtn")
+          .addEventListener("click", function () {
+            saveIssueChanges();
+          });
+
+        // Xử lý sự kiện nút Xóa trong modal
+        document
+          .getElementById("deleteIssueBtn")
+          .addEventListener("click", function () {
+            deleteIssue();
+          });
+
+        // Tải lịch sử ngay khi trang được tải nếu tab lịch sử đang active
+        if (
+          document
+            .querySelector("#history-tab")
+            .getAttribute("aria-selected") === "true"
+        ) {
+          loadHistory();
+        }
+      });
+
+      // Hàm lưu thay đổi sự cố
+      function saveIssueChanges() {
+        const id = document.getElementById("issueId").value;
+        const issue = document.getElementById("issueType").value;
+        // const status = document.getElementById("issueStatus").value;
+
+        // Hiển thị loading trên nút
+        const saveBtn = document.getElementById("saveIssueBtn");
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Đang lưu...';
+        saveBtn.disabled = true;
+
+        // Gọi API để cập nhật
+        const formData = new FormData();
+        formData.append("method", "put");
+        formData.append("row", id);
+        formData.append("issue", issue);
+
+        fetch(
+          "https://script.google.com/macros/s/AKfycbx3gz9cwbyZTJzvHRmlpSd9EY9MiTGZXsejWplt8cUUqC3lc_3-22lT_4sgGvE3HsIs-w/exec",
+          {
+            method: "POST",
+            body: formData,
+          }
+        )
+          .then((res) => res.text())
+          .then((response) => {
+            console.log("Cập nhật thành công:", response);
+
+            issueModal.hide();
+            loadHistory();
+
+            alert("Đã cập nhật thành công!");
+          })
+          .catch((err) => {
+            console.error("Error updating issue:", err);
+            alert("Lỗi khi cập nhật: " + err);
+          })
+          .finally(() => {
+            // Khôi phục nút
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+          });
+      }
+
+      // Hàm xóa sự cố
+      function deleteIssue() {
+        const id = document.getElementById("issueId").value;
+
+        // Xác nhận xóa
+        if (!confirm("Bạn có chắc chắn muốn xóa sự cố này?")) {
+          return;
+        }
+
+        // Hiển thị loading trên nút
+        const deleteBtn = document.getElementById("deleteIssueBtn");
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Đang xóa...';
+        deleteBtn.disabled = true;
+
+        // Gọi API để xóa
+        const formData = new FormData();
+        formData.append("method", "delete");
+        formData.append("row", id);
+        fetch(
+          "https://script.google.com/macros/s/AKfycbx3gz9cwbyZTJzvHRmlpSd9EY9MiTGZXsejWplt8cUUqC3lc_3-22lT_4sgGvE3HsIs-w/exec",
+          {
+            method: "POST",
+            body: formData,
+          }
+        )
+          .then((res) => res.text()) // Sử dụng res.text() thay vì res.json()
+          .then((response) => {
+            console.log("Xóa thành công:", response);
+
+            // Đóng modal
+            issueModal.hide();
+
+            // Tải lại dữ liệu
+            loadHistory();
+
+            // Hiển thị thông báo thành công
+            alert("Đã xóa thành công!");
+          })
+          .catch((err) => {
+            console.error("Error deleting issue:", err);
+            alert("Lỗi khi xóa: " + err);
+          })
+          .finally(() => {
+            // Khôi phục nút
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+          });
+      }
+
+      // Hàm gọi API lấy logs - giữ nguyên để tương thích ngược
+      function getLogToday() {
+        loadHistory();
+        // Chuyển sang tab lịch sử
+        document.getElementById("history-tab").click();
+      }
+    </script>
+  </body>
+</html>
